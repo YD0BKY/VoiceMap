@@ -1,0 +1,16 @@
+[Unit]
+Description=VoiceMap Telegram Bot
+After=network.target voicemap-whisper.service
+
+[Service]
+Type=simple
+User=prodai
+WorkingDirectory=/home/prodai/voicemap
+ExecStart=/home/prodai/voicemap/venv/bin/python telegram_bot.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

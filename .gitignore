@@ -1,0 +1,19 @@
+# Secrets — never commit these
+config.py
+
+# Local data
+local_log.txt
+pending_uploads/
+reports/
+transcript_*.txt
+*.wav
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+
+# OS
+.DS_Store
+Thumbs.db

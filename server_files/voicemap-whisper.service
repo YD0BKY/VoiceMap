@@ -1,0 +1,16 @@
+[Unit]
+Description=VoiceMap Whisper Server
+After=network.target
+
+[Service]
+Type=simple
+User=prodai
+WorkingDirectory=/home/prodai/voicemap
+ExecStart=/home/prodai/voicemap/venv/bin/python whisper_server.py --model large-v3 --device cpu
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

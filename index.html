@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trunking Radio Monitoring (Pussertif BSSN)</title>
+  <meta name="description" content="Transkripsi radio real-time dengan Whisper lokal dan ringkasan AI harian."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- Animated background -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<!-- ═══════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="header-brand">
+    <img class="brand-logo" src="sdr_monitoring_logo.png" alt="PERISAI Logo"/>
+    <span class="brand-name">Trunking Radio</span>
+    <span class="brand-sub">Pussertif BSSN</span>
+  </div>
+
+  <div class="header-center">
+    <div class="header-status">
+      <span class="status-dot" id="status-dot"></span>
+      <span class="status-label" id="status-label">Siap</span>
+    </div>
+    <div class="whisper-pill" id="whisper-pill">
+      <span class="wpill-dot"></span>
+      <span id="whisper-pill-text">Whisper...</span>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <div class="monitor-badge" id="monitor-badge">
+      <span class="pulse-dot"></span>
+      <span>Monitoring Aktif</span>
+    </div>
+
+    <button class="report-btn" id="report-btn" aria-label="Download laporan">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 3v10m0 0l-3-3m3 3l3-3M4 17h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Laporan
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════
+     INTERIM BAR (Whisper processing indicator)
+════════════════════════════════════════════════════ -->
+<div class="interim-bar" id="interim-bar" aria-live="polite">
+  <div class="interim-spinner"></div>
+  <span id="interim-text">Mentranskripsi…</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN — Transcript Feed
+════════════════════════════════════════════════════ -->
+<main class="feed-main" role="main">
+  <div class="feed-header">
+    <span class="feed-period-label" id="feed-period-label">Periode: 16:00 kemarin → sekarang</span>
+    <span class="feed-count" id="feed-count">0 entri</span>
+    <div class="level-strip">
+      <div class="level-bar-wrap">
+        <div class="level-bar" id="level-bar"></div>
+      </div>
+      <span class="level-label" id="level-label">No signal</span>
+    </div>
+  </div>
+
+  <div class="feed" id="feed" role="log" aria-label="Transcript feed" aria-live="polite">
+    <div class="feed-empty" id="feed-empty">
+      <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <rect x="18" y="14" width="12" height="16" rx="6" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M16 24a8 8 0 0 0 16 0M24 34v4M21 38h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p>Menunggu Transkripsi dari Server...</p>
+      <p class="feed-empty-sub">Transkripsi akan muncul secara otomatis ketika ada komunikasi radio yang terdeteksi.</p>
+    </div>
+  </div>
+</main>
+
+<!-- ═══════════════════════════════════════════════════
+     REPORT MODAL
+════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="report-modal" hidden role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
+  <div class="modal-card report-card">
+    <div class="modal-header">
+      <h2 class="modal-title" id="report-modal-title">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v10m0 0l-3-3m3 3l3-3M4 17h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download Laporan
+      </h2>
+      <button class="modal-close-btn" id="report-modal-close" aria-label="Tutup">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5l-10 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Ollama status -->
+      <div class="ollama-status-row" id="ollama-status-row">
+        <span class="ollama-dot" id="ollama-dot"></span>
+        <span id="ollama-status-text">Mengecek Ollama…</span>
+      </div>
+
+      <!-- Time range -->
+      <div class="range-section">
+        <label class="range-label">Periode Laporan</label>
+        <div class="range-row">
+          <div class="range-field">
+            <span class="range-field-label">Dari</span>
+            <input type="datetime-local" id="report-from" class="range-input"/>
+          </div>
+          <svg class="range-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="range-field">
+            <span class="range-field-label">Ke</span>
+            <input type="datetime-local" id="report-to" class="range-input"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model -->
+      <div class="model-row">
+        <label class="model-label" for="ollama-model">Model Ollama</label>
+        <input type="text" id="ollama-model" class="model-input" value="qwen2.5:3b-instruct-q4_K_S" placeholder="qwen2.5:3b-instruct-q4_K_S"/>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-btns">
+        <button class="btn btn-ghost btn-full" id="dl-transcript-btn">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v10m0 0l-3-3m3 3l3-3M4 17h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download Transcript
+        </button>
+        <button class="btn btn-accent btn-full" id="gen-summary-btn">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h14M3 10h10M3 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Generate &amp; Download AI Summary
+        </button>
+      </div>
+
+      <!-- Summary output (streaming) -->
+      <div class="summary-output" id="summary-output" hidden></div>
+
+      <!-- Saved reports from server -->
+      <div class="saved-reports-section">
+        <div class="saved-reports-header">
+          <span>📁 Laporan Tersimpan di Server</span>
+          <button class="refresh-btn" id="refresh-reports-btn" title="Refresh">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M4 4v5h5M16 16v-5h-5M4.1 14A7.5 7.5 0 1 0 5.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="saved-reports-list" id="saved-reports-list">
+          <p class="reports-loading">Memuat…</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js?v=20260828b"></script>
+</body>
+</html>
